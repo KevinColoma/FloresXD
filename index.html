@@ -322,6 +322,8 @@ class TextParticle {
         this.rotSpeed = 0;
         this.twinklePhase = Math.random() * Math.PI * 2;
         this.twinkleSpeed = 0.04 + Math.random() * 0.04;
+        this.turnOnTime = 0;
+        this.turnOnDelay = Math.random() * 25;
     }
 
     update(textMode, textPoints) {
@@ -329,6 +331,9 @@ class TextParticle {
             const pt = textPoints[this.textIdx % textPoints.length];
             this.targetX = pt.x + (Math.random() - 0.5) * 1.5;
             this.targetY = pt.y + (Math.random() - 0.5) * 1.5;
+            if (this.turnOnTime === 0) this.turnOnTime = time;
+        } else {
+            this.turnOnTime = 0;
         }
 
         const dx = this.targetX - this.x;
@@ -354,28 +359,48 @@ class TextParticle {
 
     draw(ctx) {
         const s = this.size;
-        let alpha;
+        let alpha, sizeMult = 1;
+
         if (textMode) {
+            const elapsed = time - this.turnOnTime - this.turnOnDelay;
+            const brightness = Math.min(1, Math.max(0, elapsed / 15));
+            const flash = elapsed > 0 && elapsed < 6 ? 1 + (1 - elapsed / 6) * 0.8 : 0;
             const t = time * this.twinkleSpeed + this.twinklePhase;
-            alpha = 0.92 + Math.sin(t) * 0.08;
+            alpha = (0.92 + Math.sin(t) * 0.08) * brightness;
+            sizeMult = 1 + flash * 0.15 + Math.sin(time * this.twinkleSpeed * 1.5 + this.twinklePhase) * 0.04;
         } else {
             alpha = 0.2 + Math.sin(time * 0.015 + this.phase) * 0.1;
         }
-        const sizePulse = textMode ? 1 + Math.sin(time * this.twinkleSpeed * 1.5 + this.twinklePhase) * 0.06 : 1;
 
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        if (textMode) {
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 4.5);
+            grad.addColorStop(0, `rgba(255,180,200,${alpha * 0.25})`);
+            grad.addColorStop(1, 'rgba(255,180,200,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 4.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         ctx.rotate(this.rotation);
-        ctx.globalAlpha = Math.max(0.05, Math.min(1, alpha));
-        const ss = s * sizePulse;
+        ctx.globalAlpha = Math.max(0.02, Math.min(1, alpha));
+        const ss = s * sizeMult;
         ctx.drawImage(this.petalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
 
         if (textMode) {
-            const glow = Math.sin(time * this.twinkleSpeed * 3 + this.twinklePhase) * 0.5 + 0.5;
-            ctx.globalAlpha = glow * 0.3;
+            ctx.globalAlpha = alpha * 0.95;
             ctx.beginPath();
-            ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFF';
+            ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFCE8';
+            ctx.fill();
+
+            ctx.globalAlpha = alpha * 0.35;
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.65, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFE8C0';
             ctx.fill();
         }
 
