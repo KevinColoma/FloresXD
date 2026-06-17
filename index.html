@@ -373,7 +373,7 @@ class TextParticle {
         ctx.drawImage(this.petalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
 
         if (textMode) {
-            const whiteMix = Math.sin(time * this.twinkleSpeed * 1.8 + this.twinklePhase) * 0.5 + 0.5;
+            const whiteMix = Math.sin(time * this.twinkleSpeed * 5 + this.twinklePhase) * 0.5 + 0.5;
             ctx.globalAlpha = whiteMix * 0.65;
             ctx.drawImage(whitePetalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
         }
