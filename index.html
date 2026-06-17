@@ -263,10 +263,10 @@ let textModeStart = 0;
 const TEXT_DURATION = 10000;
 
 const PETAL_COLORS = [
-    '#FFE8F2', '#FFDCE8', '#FFD0E0',
-    '#FFC8DA', '#FFC0D4', '#FFB8CE',
-    '#FFACC6', '#FFA0BE', '#FF94B6',
-    '#FFE0EC', '#FFD4E4', '#FFE6F0'
+    '#FF1493', '#FF0080', '#FF0066',
+    '#FF69B4', '#FF1A8C', '#FF3399',
+    '#FF4DA6', '#FF66B2', '#FF80BF',
+    '#FF1493', '#FF0080', '#FF0066'
 ];
 
 function computeTextPoints() {
@@ -357,7 +357,7 @@ class TextParticle {
         let alpha;
         if (textMode) {
             const t = time * this.twinkleSpeed + this.twinklePhase;
-            alpha = 0.55 + Math.sin(t) * 0.3 + Math.sin(t * 2.3 + 1.2) * 0.12;
+            alpha = 0.92 + Math.sin(t) * 0.08;
         } else {
             alpha = 0.2 + Math.sin(time * 0.015 + this.phase) * 0.1;
         }
@@ -551,7 +551,7 @@ function draw() {
     for (let i = 0; i < tlen; i++) textParticles[i].draw(ctx);
     ctx.restore();
     if (textMode) {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
         ctx.fillRect(0, 0, W, H);
     }
 }
