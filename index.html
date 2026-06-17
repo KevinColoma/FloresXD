@@ -35,7 +35,7 @@ canvas {
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui">✦ <span id="modeLabel">Clic para revelar Fer</span> ✦</div>
+<div id="ui">✦ <span id="modeLabel">Clic para revelar Para ti</span> ✦</div>
 <script>
 // ================================================================
 // CONFIGURACIÓN
@@ -244,7 +244,7 @@ function createFlowers() {
 }
 
 // ================================================================
-// SISTEMA DE PÉTALOS QUE FORMAN "Fer"
+// SISTEMA DE PÉTALOS QUE FORMAN "Para ti"
 // ================================================================
 let textParticles = [];
 let textTargets = [];
@@ -264,7 +264,7 @@ function computeTextPoints() {
     const temp = document.createElement('canvas');
     temp.width = DESIGN_W; temp.height = DESIGN_H;
     const tc = temp.getContext('2d');
-    const textStr = 'Fer';
+    const textStr = 'Para ti';
     const fontSize = Math.min(DESIGN_W * 0.55, DESIGN_H * 0.35);
     tc.font = `900 ${fontSize}px Arial, sans-serif`;
     tc.textAlign = 'center'; tc.textBaseline = 'middle';
@@ -384,14 +384,14 @@ function toggleTextMode() {
     const ui = document.querySelector('#ui');
     if (textMode) {
         textModeStart = time;
-        label.textContent = 'Fer';
+        label.textContent = 'Para ti';
         ui.style.color = 'rgba(220,140,180,0.5)';
         ui.style.letterSpacing = '5px';
         textParticles.forEach(p => {
             p.rotSpeed = (Math.random() - 0.5) * 0.06;
         });
     } else {
-        label.textContent = 'Clic para revelar Fer';
+        label.textContent = 'Clic para revelar Para ti';
         ui.style.color = '';
         ui.style.letterSpacing = '';
         textParticles.forEach(p => {
