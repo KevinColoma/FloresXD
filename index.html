@@ -336,14 +336,26 @@ class TextParticle {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
 
+        let ax = 0, ay = 0;
+        if (mouse.active) {
+            const mdx = this.x - mouse.x, mdy = this.y - mouse.y;
+            const dSq = mdx * mdx + mdy * mdy;
+            if (dSq < MOUSE_RADIUS * MOUSE_RADIUS && dSq > 1) {
+                const dist = Math.sqrt(dSq);
+                const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+                ax += (mdx / dist) * force * 3.5;
+                ay += (mdy / dist) * force * 3.5;
+            }
+        }
+
         if (textMode) {
-            this.vx += dx * 0.08;
-            this.vy += dy * 0.08;
+            this.vx += dx * 0.08 + ax;
+            this.vy += dy * 0.08 + ay;
             this.rotSpeed += (this.targetY - this.y) * 0.0002;
             this.rotSpeed *= 0.96;
         } else {
-            this.vx += dx * 0.035;
-            this.vy += dy * 0.035;
+            this.vx += dx * 0.035 + ax;
+            this.vy += dy * 0.035 + ay;
             this.rotSpeed *= 0.96;
         }
 
