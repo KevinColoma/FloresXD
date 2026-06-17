@@ -268,6 +268,7 @@ const PETAL_COLORS = [
     '#FF4DA6', '#FF66B2', '#FF80BF',
     '#FF1493', '#FF0080', '#FF0066'
 ];
+const whitePetalTexture = createPetalTexture('#FFFFFF');
 
 function computeTextPoints() {
     const temp = document.createElement('canvas');
@@ -371,12 +372,9 @@ class TextParticle {
         ctx.drawImage(this.petalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
 
         if (textMode) {
-            const glow = Math.sin(time * this.twinkleSpeed * 3 + this.twinklePhase) * 0.5 + 0.5;
-            ctx.globalAlpha = glow * 0.3;
-            ctx.beginPath();
-            ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFF';
-            ctx.fill();
+            const whiteMix = Math.sin(time * this.twinkleSpeed * 1.8 + this.twinklePhase) * 0.5 + 0.5;
+            ctx.globalAlpha = whiteMix * 0.65;
+            ctx.drawImage(whitePetalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
         }
 
         ctx.restore();
