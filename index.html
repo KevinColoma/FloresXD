@@ -32,10 +32,30 @@ canvas {
     white-space: nowrap;
     transition: all 0.5s;
 }
+#nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    pointer-events: none;
+    z-index: 10;
+}
+#nav span {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.12);
+    font-weight: 600;
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="nav"><span id="titleLeft">Hortensia</span><span id="titleRight">Deber Cálculo</span></div>
 <div id="ui">✦ <span id="modeLabel">Clic para revelar Para ti</span> ✦</div>
 <script>
 // ================================================================
