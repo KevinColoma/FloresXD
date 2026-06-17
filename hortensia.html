@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hortensia en Jarron</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #e8e0d8;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+canvas {
+    display: block;
+    margin: 0 auto;
+    background: #FFFFFF;
+    cursor: default;
+}
+#ui {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(0,0,0,0.1);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    white-space: nowrap;
+    transition: all 0.5s;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">✦ <span id="modeLabel">Clic para revelar Fer</span> ✦</div>
+<script>
+// ================================================================
+// CONFIGURACIÓN
+// ================================================================
+const DESIGN_W = 1000;
+const DESIGN_H = 1200;
+const FLORETS_PER_FLOWER = 950;
+const TEXT_PARTICLES = 8000;
+const MOUSE_RADIUS = 80;
+const RETURN_SPEED = 0.03;
+
+const FLOWERS = [
+    {
+        name: 'top',
+        cx: 0.50, cy: 0.18, r: 0.150,
+        colors: { light: '#FFE0CC', mid: '#FFB07C', dark: '#E88A5A', deeper: '#C76A44', shadow: '#9E5030', center: '#D4734A' }
+    },
+    {
+        name: 'leftUp',
+        cx: 0.36, cy: 0.28, r: 0.128,
+        colors: { light: '#7AA3D9', mid: '#1B3B6F', dark: '#0F2549', deeper: '#081633', shadow: '#040D1F', center: '#0A1A33' }
+    },
+    {
+        name: 'rightUp',
+        cx: 0.64, cy: 0.28, r: 0.128,
+        colors: { light: '#C98BE8', mid: '#7B2D8E', dark: '#541F63', deeper: '#3B1547', shadow: '#240D2E', center: '#3B1547' }
+    },
+    {
+        name: 'leftLo',
+        cx: 0.39, cy: 0.42, r: 0.125,
+        colors: { light: '#FF99CC', mid: '#FF1493', dark: '#CC006D', deeper: '#990052', shadow: '#660036', center: '#990052' }
+    },
+    {
+        name: 'rightLo',
+        cx: 0.61, cy: 0.42, r: 0.125,
+        colors: { light: '#B3E8FA', mid: '#5BC0EB', dark: '#2F9EC9', deeper: '#1D7DA3', shadow: '#0F5270', center: '#1D7DA3' }
+    }
+];
+
+// ================================================================
+// CANVAS SETUP
+// ================================================================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, scale, ox, oy;
+let mouse = { x: -9999, y: -9999, active: false };
+let time = 0;
+
+function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    const sx = W / DESIGN_W;
+    const sy = H / DESIGN_H;
+    scale = Math.min(sx, sy);
+    ox = (W - DESIGN_W * scale) / 2;
+    oy = (H - DESIGN_H * scale) / 2;
+}
+
+// ================================================================
+// TEXTURE CACHE
+// ================================================================
+const textureCache = {};
+
+function createFloretTexture(petalColor, centerColor) {
+    const key = `${petalColor}_${centerColor}`;
+    if (textureCache[key]) return textureCache[key];
+    const tex = document.createElement('canvas');
+    tex.width = tex.height = 72;
+    const tc = tex.getContext('2d');
+    const cx = 36, cy = 36;
+    const pl = 16, pw = 7;
+    for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        tc.save(); tc.translate(cx, cy); tc.rotate(a);
+        tc.beginPath();
+        tc.ellipse(0, -pl * 0.5 + 1, pw + 0.5, pl * 0.5 + 1, 0, 0, Math.PI * 2);
+        tc.fillStyle = 'rgba(0,0,0,0.08)'; tc.fill();
+        tc.beginPath();
+        tc.ellipse(0, -pl * 0.5, pw, pl * 0.5, 0, 0, Math.PI * 2);
+        tc.fillStyle = petalColor; tc.fill();
+        tc.restore();
+    }
+    tc.beginPath(); tc.arc(cx, cy, 3, 0, Math.PI * 2); tc.fillStyle = centerColor; tc.fill();
+    const img = new Image(); img.src = tex.toDataURL(); textureCache[key] = img; return img;
+}
+
+function createSmallFloretTexture(petalColor, centerColor) {
+    const key = `small_${petalColor}_${centerColor}`;
+    if (textureCache[key]) return textureCache[key];
+    const tex = document.createElement('canvas');
+    tex.width = tex.height = 48;
+    const tc = tex.getContext('2d');
+    const cx = 24, cy = 24;
+    const pl = 10, pw = 4;
+    for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        tc.save(); tc.translate(cx, cy); tc.rotate(a);
+        tc.beginPath();
+        tc.ellipse(1, -pl * 0.5 + 1, pw + 0.5, pl * 0.5 + 0.5, 0, 0, Math.PI * 2);
+        tc.fillStyle = 'rgba(0,0,0,0.06)'; tc.fill();
+        tc.beginPath();
+        tc.ellipse(0, -pl * 0.5, pw, pl * 0.5, 0, 0, Math.PI * 2);
+        tc.fillStyle = petalColor; tc.fill();
+        tc.restore();
+    }
+    tc.beginPath(); tc.arc(cx, cy, 2, 0, Math.PI * 2); tc.fillStyle = centerColor; tc.fill();
+    const img = new Image(); img.src = tex.toDataURL(); textureCache[key] = img; return img;
+}
+
+function createPetalTexture(color) {
+    const key = `petal_${color}`;
+    if (textureCache[key]) return textureCache[key];
+    const tex = document.createElement('canvas');
+    tex.width = tex.height = 40;
+    const tc = tex.getContext('2d');
+    const cx = 20, cy = 20;
+    const pw = 6, pl = 10;
+    const grad = tc.createRadialGradient(cx, cy - 6, 0, cx, cy - 6, pl);
+    const c = parseInt(color.slice(1), 16);
+    const r = (c >> 16) & 0xff, g = (c >> 8) & 0xff, b = c & 0xff;
+    grad.addColorStop(0, `rgb(${Math.min(255,r+50)},${Math.min(255,g+50)},${Math.min(255,b+50)})`);
+    grad.addColorStop(0.5, `rgb(${r},${g},${b})`);
+    grad.addColorStop(1, `rgb(${Math.max(0,r-40)},${Math.max(0,g-40)},${Math.max(0,b-40)})`);
+    tc.fillStyle = grad;
+    tc.beginPath();
+    tc.ellipse(cx, cy - pl * 0.5, pw, pl * 0.5, 0, 0, Math.PI * 2);
+    tc.fill();
+    tc.strokeStyle = 'rgba(0,0,0,0.06)';
+    tc.lineWidth = 0.5;
+    tc.stroke();
+    const img = new Image(); img.src = tex.toDataURL(); textureCache[key] = img; return img;
+}
+
+// ================================================================
+// FLORET CLASS
+// ================================================================
+let florets = [];
+let flowerGroups = [];
+
+class Floret {
+    constructor(homeX, homeY, z, size, texture) {
+        this.homeX = homeX; this.homeY = homeY; this.z = z;
+        this.x = homeX; this.y = homeY;
+        this.vx = 0; this.vy = 0;
+        this.size = size; this.texture = texture;
+        this.phase = Math.random() * Math.PI * 2;
+    }
+    update() {
+        const dx = this.homeX - this.x, dy = this.homeY - this.y;
+        let ax = dx * RETURN_SPEED, ay = dy * RETURN_SPEED;
+        if (mouse.active) {
+            const mdx = this.x - mouse.x, mdy = this.y - mouse.y;
+            const dSq = mdx * mdx + mdy * mdy;
+            if (dSq < MOUSE_RADIUS * MOUSE_RADIUS && dSq > 1) {
+                const dist = Math.sqrt(dSq);
+                const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+                const df = 0.6 + (this.z + 1) * 0.4;
+                ax += (mdx / dist) * force * 3.5 * df;
+                ay += (mdy / dist) * force * 3.5 * df;
+            }
+        }
+        ax += Math.sin(time * 0.0012 + this.phase) * 0.04;
+        ay += Math.cos(time * 0.0018 + this.phase * 1.7) * 0.025;
+        this.vx += ax; this.vy += ay;
+        this.vx *= 0.91; this.vy *= 0.91;
+        this.x += this.vx; this.y += this.vy;
+    }
+    draw(ctx) {
+        ctx.drawImage(this.texture, this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+    }
+}
+
+// ================================================================
+// CREAR FLORES
+// ================================================================
+function createFlowers() {
+    florets = []; flowerGroups = [];
+    FLOWERS.forEach((f, fi) => {
+        const fx = f.cx * DESIGN_W, fy = f.cy * DESIGN_H, fr = f.r * DESIGN_W;
+        const tL = createFloretTexture(f.colors.light, f.colors.center);
+        const tM = createFloretTexture(f.colors.mid, f.colors.center);
+        const tD = createFloretTexture(f.colors.dark, f.colors.center);
+        const tDe = createSmallFloretTexture(f.colors.deeper, f.colors.center);
+        const tS = createSmallFloretTexture(f.colors.shadow, f.colors.center);
+        const group = [];
+        for (let i = 0; i < FLORETS_PER_FLOWER; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = fr * (0.72 + Math.random() * 0.30);
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+            const zN = z / fr;
+            let tex, size;
+            if (zN > 0.5) { tex = tL; size = 6.5 + Math.random() * 2; }
+            else if (zN > 0.2) { tex = tM; size = 5.5 + Math.random() * 2; }
+            else if (zN > -0.15) { tex = tD; size = 4.5 + Math.random() * 1.5; }
+            else if (zN > -0.5) { tex = tDe; size = 3.5 + Math.random() * 1.5; }
+            else { tex = tS; size = 2.5 + Math.random() * 1.5; }
+            group.push(new Floret(fx + x, fy + y, zN, size, tex));
+        }
+        group.sort((a, b) => a.z - b.z);
+        flowerGroups.push(group);
+    });
+    flowerGroups.forEach(g => g.forEach(f => florets.push(f)));
+}
+
+// ================================================================
+// SISTEMA DE PÉTALOS QUE FORMAN "Fer"
+// ================================================================
+let textParticles = [];
+let textTargets = [];
+let textMode = false;
+let textModeStart = 0;
+const TEXT_DURATION = 10000;
+const TEXT_STEP = 3;
+
+const PETAL_COLORS = [
+    '#FFB0C8', '#FF8FAB', '#FF6B95',
+    '#FFD4A8', '#FFC082', '#FFAB66',
+    '#D4A0E8', '#C488D4', '#B870C8',
+    '#FFB8D8', '#FFA0C8', '#FF88B8'
+];
+
+function computeTextPoints() {
+    const temp = document.createElement('canvas');
+    temp.width = DESIGN_W; temp.height = DESIGN_H;
+    const tc = temp.getContext('2d');
+    const textStr = 'Fer';
+    const fontSize = Math.min(DESIGN_W * 0.55, DESIGN_H * 0.35);
+    tc.font = `900 ${fontSize}px Arial, sans-serif`;
+    tc.textAlign = 'center'; tc.textBaseline = 'middle';
+    tc.fillStyle = '#FFF';
+    tc.fillText(textStr, DESIGN_W / 2, DESIGN_H * 0.48);
+    const data = tc.getImageData(0, 0, DESIGN_W, DESIGN_H).data;
+    const pts = [];
+    for (let y = 0; y < DESIGN_H; y += TEXT_STEP) {
+        for (let x = 0; x < DESIGN_W; x += TEXT_STEP) {
+            if (data[(y * DESIGN_W + x) * 4 + 3] > 128) pts.push({ x, y });
+        }
+    }
+    return pts;
+}
+
+function getFlowerCenters() {
+    return FLOWERS.map(f => ({ x: f.cx * DESIGN_W, y: f.cy * DESIGN_H, r: f.r * DESIGN_W }));
+}
+
+class TextParticle {
+    constructor(textPoints, flowerCenters) {
+        this.petalTexture = createPetalTexture(PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)]);
+
+        const fc = flowerCenters[Math.floor(Math.random() * flowerCenters.length)];
+        const a = Math.random() * Math.PI * 2;
+        const r = fc.r * (0.1 + Math.random() * 0.7);
+        this.homeX = fc.x + r * Math.cos(a);
+        this.homeY = fc.y + r * Math.sin(a);
+
+        this.x = this.homeX;
+        this.y = this.homeY;
+        this.targetX = this.homeX;
+        this.targetY = this.homeY;
+        this.vx = 0;
+        this.vy = 0;
+        this.size = 4 + Math.random() * 3.5;
+        this.phase = Math.random() * Math.PI * 2;
+        this.textIdx = Math.floor(Math.random() * textPoints.length);
+
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotSpeed = 0;
+        this.twinklePhase = Math.random() * Math.PI * 2;
+        this.twinkleSpeed = 0.04 + Math.random() * 0.04;
+    }
+
+    update(textMode, textPoints) {
+        if (textMode) {
+            const pt = textPoints[this.textIdx % textPoints.length];
+            this.targetX = pt.x + (Math.random() - 0.5) * 1.5;
+            this.targetY = pt.y + (Math.random() - 0.5) * 1.5;
+        }
+
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+
+        if (textMode) {
+            this.vx += dx * 0.08;
+            this.vy += dy * 0.08;
+            this.rotSpeed += (this.targetY - this.y) * 0.0002;
+            this.rotSpeed *= 0.96;
+        } else {
+            this.vx += dx * 0.035;
+            this.vy += dy * 0.035;
+            this.rotSpeed *= 0.96;
+        }
+
+        this.vx *= 0.88;
+        this.vy *= 0.88;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.rotSpeed;
+    }
+
+    draw(ctx) {
+        const s = this.size;
+        let alpha;
+        if (textMode) {
+            const t = time * this.twinkleSpeed + this.twinklePhase;
+            alpha = 0.55 + Math.sin(t) * 0.3 + Math.sin(t * 2.3 + 1.2) * 0.12;
+        } else {
+            alpha = 0.2 + Math.sin(time * 0.015 + this.phase) * 0.1;
+        }
+        const sizePulse = textMode ? 1 + Math.sin(time * this.twinkleSpeed * 1.5 + this.twinklePhase) * 0.06 : 1;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, alpha));
+        const ss = s * sizePulse;
+        ctx.drawImage(this.petalTexture, -ss * 1.2, -ss * 1.2, ss * 2.4, ss * 2.4);
+
+        if (textMode) {
+            const glow = Math.sin(time * this.twinkleSpeed * 3 + this.twinklePhase) * 0.5 + 0.5;
+            ctx.globalAlpha = glow * 0.3;
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+function createTextParticles() {
+    textTargets = computeTextPoints();
+    textParticles = [];
+    const centers = getFlowerCenters();
+    for (let i = 0; i < TEXT_PARTICLES; i++) {
+        textParticles.push(new TextParticle(textTargets, centers));
+    }
+}
+
+function toggleTextMode() {
+    textMode = !textMode;
+    const label = document.getElementById('modeLabel');
+    const ui = document.querySelector('#ui');
+    if (textMode) {
+        textModeStart = time;
+        label.textContent = 'Fer';
+        ui.style.color = 'rgba(220,140,180,0.5)';
+        ui.style.letterSpacing = '5px';
+        textParticles.forEach(p => {
+            p.rotSpeed = (Math.random() - 0.5) * 0.06;
+        });
+    } else {
+        label.textContent = 'Clic para revelar Fer';
+        ui.style.color = '';
+        ui.style.letterSpacing = '';
+        textParticles.forEach(p => {
+            p.targetX = p.homeX;
+            p.targetY = p.homeY;
+            p.rotSpeed = (Math.random() - 0.5) * 0.02;
+        });
+    }
+}
+
+// ================================================================
+// DIBUJAR
+// ================================================================
+function drawFlowerShadows(ctx) {
+    FLOWERS.forEach(f => {
+        const fx = f.cx * DESIGN_W, fy = f.cy * DESIGN_H, fr = f.r * DESIGN_W;
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr * 1.1);
+        g.addColorStop(0, 'rgba(180,140,120,0.06)');
+        g.addColorStop(0.5, 'rgba(180,140,120,0.03)');
+        g.addColorStop(1, 'rgba(180,140,120,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(fx, fy, fr * 1.1, 0, Math.PI * 2); ctx.fill();
+    });
+}
+
+function drawVase(ctx) {
+    const vx = DESIGN_W / 2, vy = 630;
+    const p = [{y:0,w:107},{y:39,w:85},{y:110,w:117},{y:220,w:146},{y:330,w:127},{y:424,w:96},{y:457,w:83}];
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(vx - p[0].w, vy + p[0].y);
+    for (let i = 1; i < p.length; i++)
+        ctx.quadraticCurveTo(vx - p[i-1].w, vy + p[i-1].y + (p[i].y-p[i-1].y)*0.5, vx - p[i].w, vy + p[i].y);
+    const l = p[p.length-1];
+    ctx.lineTo(vx + l.w, vy + l.y);
+    for (let i = p.length-1; i >= 1; i--)
+        ctx.quadraticCurveTo(vx + p[i].w, vy + p[i].y - (p[i].y-p[i-1].y)*0.5, vx + p[i-1].w, vy + p[i-1].y);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(vx-170,0,vx+170,0);
+    g.addColorStop(0,'#BFA58B'); g.addColorStop(0.2,'#DCC5B0'); g.addColorStop(0.4,'#EDDDD0');
+    g.addColorStop(0.5,'#F2E6DB'); g.addColorStop(0.6,'#EDDDD0'); g.addColorStop(0.8,'#DCC5B0'); g.addColorStop(1,'#BFA58B');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,130,110,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(vx,vy+6,112,12,0,0,Math.PI*2);
+    ctx.fillStyle = '#F2E6DB'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(vx,vy+4,87,9,0,0,Math.PI*2);
+    ctx.fillStyle = '#7A6548'; ctx.fill();
+    ctx.restore();
+}
+
+function drawStems(ctx) {
+    const vx = DESIGN_W/2, vy = 635;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    const ends = FLOWERS.map(f => ({x:f.cx*DESIGN_W, y:f.cy*DESIGN_H + f.r*DESIGN_W*0.4}));
+    ctx.lineWidth=8;
+    ends.forEach(se => {
+        const mx = (se.x+vx)/2 + (se.x-vx)*0.12, my = (se.y+vy)/2 - 30;
+        ctx.strokeStyle='#5D7A3A';
+        ctx.beginPath(); ctx.moveTo(vx,vy); ctx.quadraticCurveTo(mx,my,se.x,se.y); ctx.stroke();
+        ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(vx+2,vy+2); ctx.quadraticCurveTo(mx+2,my+2,se.x+2,se.y+2); ctx.stroke();
+        ctx.lineWidth=8;
+    });
+    ctx.lineWidth=13; ctx.strokeStyle='#4A6B2E';
+    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx,vy-100); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.1)'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.moveTo(vx+2,vy+2); ctx.lineTo(vx+2,vy-98); ctx.stroke();
+}
+
+function drawLeaf(ctx,x,y,angle,length,color,flip) {
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+    if(flip) ctx.scale(1,-1);
+    const w=length*0.32;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(length*0.2,-w*0.7,length*0.6,-w*0.9,length,0);
+    ctx.bezierCurveTo(length*0.6,w*0.9,length*0.2,w*0.7,0,0);
+    ctx.fillStyle=color; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1; ctx.stroke();
+    const vc=color==='#2D6B3F'?'#4A9B5F':'#5BB87A';
+    ctx.strokeStyle=vc; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(3,0); ctx.lineTo(length*0.82,0); ctx.stroke();
+    ctx.strokeStyle='rgba(74,155,95,0.35)'; ctx.lineWidth=1;
+    for(let i=0;i<5;i++){
+        const t=(i+1)*length/6, vw=w*(1-t/length)*0.5, off=vw*0.6;
+        ctx.beginPath(); ctx.moveTo(t,0); ctx.quadraticCurveTo(t+off*0.5,-vw*0.5,t+off,-vw*0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(t,0); ctx.quadraticCurveTo(t+off*0.5,vw*0.5,t+off,vw*0.7); ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawLeaves(ctx) {
+    const d = [
+        {x:420,y:500,a:-0.5,l:234,c:'#2D6B3F',f:false},{x:580,y:510,a:0.5,l:221,c:'#3A7D4E',f:true},
+        {x:340,y:450,a:-0.9,l:202,c:'#2D6B3F',f:true},{x:660,y:460,a:0.9,l:208,c:'#3A7D4E',f:false},
+        {x:460,y:410,a:-0.25,l:189,c:'#35824A',f:false},{x:540,y:420,a:0.25,l:182,c:'#35824A',f:true},
+        {x:390,y:570,a:-0.7,l:176,c:'#2D6B3F',f:false},{x:610,y:580,a:0.7,l:189,c:'#3A7D4E',f:true},
+        {x:470,y:620,a:-0.3,l:156,c:'#35824A',f:true},{x:530,y:630,a:0.3,l:150,c:'#2D6B3F',f:false},
+        {x:380,y:390,a:-0.4,l:169,c:'#3A7D4E',f:true},{x:620,y:400,a:0.4,l:163,c:'#2D6B3F',f:false},
+    ];
+    d.forEach(l => drawLeaf(ctx,l.x,l.y,l.a,l.l,l.c,l.f));
+    ctx.save();
+    FLOWERS.forEach(f => {
+        const fx=f.cx*DESIGN_W, fy=f.cy*DESIGN_H, fr=f.r*DESIGN_W;
+        ctx.beginPath();
+        ctx.ellipse(fx,fy+fr*0.4,fr*0.85,fr*0.25,0,0,Math.PI*2);
+        ctx.fillStyle='rgba(0,30,0,0.12)'; ctx.fill();
+    });
+    ctx.restore();
+}
+
+// ================================================================
+// BUCLE PRINCIPAL
+// ================================================================
+function update() {
+    time++;
+    const flen = florets.length;
+    for (let i = 0; i < flen; i++) florets[i].update();
+    const tlen = textParticles.length;
+    for (let i = 0; i < tlen; i++) textParticles[i].update(textMode, textTargets);
+    if (textMode && time - textModeStart > TEXT_DURATION) toggleTextMode();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.rect(0, 0, DESIGN_W, DESIGN_H);
+    ctx.clip();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+    ctx.save();
+    ctx.translate(DESIGN_W/2, 1070);
+    ctx.beginPath(); ctx.ellipse(0,0,195,20,0,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.04)'; ctx.fill();
+    ctx.restore();
+    drawStems(ctx); drawLeaves(ctx); drawVase(ctx); drawFlowerShadows(ctx);
+    const flen = florets.length;
+    for (let i = 0; i < flen; i++) florets[i].draw(ctx);
+    if (textMode) {
+        ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,DESIGN_W,DESIGN_H);
+        ctx.fillStyle='rgba(255,200,220,0.04)';
+        ctx.beginPath(); ctx.arc(DESIGN_W/2,DESIGN_H*0.48,350,0,Math.PI*2); ctx.fill();
+    }
+    const tlen = textParticles.length;
+    for (let i = 0; i < tlen; i++) textParticles[i].draw(ctx);
+    ctx.restore();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+// ================================================================
+// EVENTOS (Desktop + Móvil)
+// ================================================================
+function handlePointer(x, y) {
+    mouse.x = (x - ox) / scale;
+    mouse.y = (y - oy) / scale;
+    mouse.active = true;
+}
+function handleClick(x, y) {
+    const flen = florets.length;
+    for (let i = 0; i < flen; i++) {
+        const f = florets[i];
+        const dx = f.x - x, dy = f.y - y;
+        const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+        f.vx += (dx/dist)*8; f.vy += (dy/dist)*8;
+    }
+    toggleTextMode();
+}
+
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    handlePointer(e.clientX - rect.left, e.clientY - rect.top);
+});
+canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+canvas.addEventListener('mousedown', e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left - ox) / scale;
+    const my = (e.clientY - rect.top - oy) / scale;
+    handleClick(mx, my);
+});
+
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    handlePointer(t.clientX - rect.left, t.clientY - rect.top);
+    const mx = (t.clientX - rect.left - ox) / scale;
+    const my = (t.clientY - rect.top - oy) / scale;
+    handleClick(mx, my);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    handlePointer(t.clientX - rect.left, t.clientY - rect.top);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    mouse.active = false;
+}, { passive: false });
+
+window.addEventListener('resize', resize);
+
+// ================================================================
+// INIT
+// ================================================================
+resize(); createFlowers(); createTextParticles(); loop();
+</script>
+</body>
+</html>
