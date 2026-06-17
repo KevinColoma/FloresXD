@@ -48,7 +48,7 @@ const TEXT_PARTICLES = 11000;
 const TEXT_STEP = 3;
 const MOUSE_RADIUS = 80;
 const RETURN_SPEED = 0.03;
-const ZOOM = 1.15;
+const ZOOM = 1.25;
 
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 const MOBILE_FLORETS = 600;
@@ -549,10 +549,7 @@ function draw() {
     const tlen = textParticles.length;
     for (let i = 0; i < tlen; i++) textParticles[i].draw(ctx);
     ctx.restore();
-    // if (textMode) {
-    //     ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    //     ctx.fillRect(0, 0, W, H);
-    // }
+
 }
 
 let _frame = 0;
