@@ -56,7 +56,7 @@ canvas {
 <body>
 <canvas id="c"></canvas>
 <div id="nav"><span id="titleLeft">Hortensia</span><span id="titleRight">Deber Cálculo</span></div>
-<div id="ui">✦ <span id="modeLabel">Clic para revelar Para ti</span> ✦</div>
+<div id="ui">✦ <span id="modeLabel"></span> ✦</div>
 <script>
 // ================================================================
 // CONFIGURACIÓN
@@ -438,8 +438,8 @@ function toggleTextMode() {
             p.rotSpeed = (Math.random() - 0.5) * 0.06;
         });
     } else {
-        label.textContent = 'Clic para revelar';
-        ui.style.color = '';
+        label.textContent = isMobile ? 'Doble click' : 'Clic para revelar';
+        ui.style.color = isMobile ? '#CC0000' : '';
         ui.style.letterSpacing = '';
         textParticles.forEach(p => {
             p.targetX = p.homeX;
@@ -678,7 +678,10 @@ window.addEventListener('resize', resize);
 // ================================================================
 // INIT
 // ================================================================
-resize(); createFlowers(); createTextParticles(); loop();
+resize(); createFlowers(); createTextParticles();
+document.getElementById('modeLabel').textContent = isMobile ? 'Doble click' : 'Clic para revelar';
+if (isMobile) document.querySelector('#ui').style.color = '#CC0000';
+loop();
 </script>
 </body>
 </html>
