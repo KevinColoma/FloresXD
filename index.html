@@ -277,7 +277,7 @@ function computeTextPoints() {
     const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
     const fontSize = Math.min(DESIGN_W / longestLine.length * 1.8, DESIGN_H / lines.length * 0.4);
     const lineHeight = fontSize * 1.2;
-    const startY = DESIGN_H * 0.48 - lineHeight;
+    const startY = DESIGN_H * 0.70 - lineHeight;
     tc.font = `900 ${fontSize}px Arial, sans-serif`;
     tc.textAlign = 'center'; tc.textBaseline = 'middle';
     tc.fillStyle = '#FFF';
