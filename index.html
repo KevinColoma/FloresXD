@@ -577,6 +577,18 @@ function handleClick(x, y) {
     }
     toggleTextMode();
 }
+function scatterFlorets(x, y) {
+    const flen = florets.length;
+    for (let i = 0; i < flen; i++) {
+        const f = florets[i];
+        const dx = f.x - x, dy = f.y - y;
+        const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+        f.vx += (dx/dist)*8; f.vy += (dy/dist)*8;
+    }
+}
+
+let tapCount = 0;
+let tapTimer = null;
 
 canvas.addEventListener('mousemove', e => {
     const rect = canvas.getBoundingClientRect();
@@ -594,10 +606,24 @@ canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const t = e.touches[0];
-    handlePointer(t.clientX - rect.left, t.clientY - rect.top);
     const mx = (t.clientX - rect.left - ox) / scale;
     const my = (t.clientY - rect.top - oy) / scale;
-    handleClick(mx, my);
+    handlePointer(t.clientX - rect.left, t.clientY - rect.top);
+    scatterFlorets(mx, my);
+
+    if (isMobile) {
+        tapCount++;
+        if (tapCount === 1) {
+            tapTimer = setTimeout(() => { tapCount = 0; tapTimer = null; }, 350);
+        } else if (tapCount >= 2) {
+            clearTimeout(tapTimer);
+            tapCount = 0;
+            tapTimer = null;
+            toggleTextMode();
+        }
+    } else {
+        toggleTextMode();
+    }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
@@ -605,6 +631,7 @@ canvas.addEventListener('touchmove', e => {
     const rect = canvas.getBoundingClientRect();
     const t = e.touches[0];
     handlePointer(t.clientX - rect.left, t.clientY - rect.top);
+    if (tapTimer) { clearTimeout(tapTimer); tapCount = 0; tapTimer = null; }
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
