@@ -48,11 +48,12 @@ const TEXT_PARTICLES = 11000;
 const TEXT_STEP = 3;
 const MOUSE_RADIUS = 80;
 const RETURN_SPEED = 0.03;
+const ZOOM = 1.15;
 
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-const MOBILE_FLORETS = 750;
-const MOBILE_TEXT_PARTICLES = 5500;
-const MOBILE_TEXT_STEP = 5;
+const MOBILE_FLORETS = 600;
+const MOBILE_TEXT_PARTICLES = 4000;
+const MOBILE_TEXT_STEP = 6;
 const _FLORETS = isMobile ? MOBILE_FLORETS : FLORETS_PER_FLOWER;
 const _TEXT_PARTICLES = isMobile ? MOBILE_TEXT_PARTICLES : TEXT_PARTICLES;
 const _TEXT_STEP = isMobile ? MOBILE_TEXT_STEP : TEXT_STEP;
@@ -99,7 +100,7 @@ function resize() {
     H = canvas.height = window.innerHeight;
     const sx = W / DESIGN_W;
     const sy = H / DESIGN_H;
-    scale = Math.min(sx, sy);
+    scale = Math.min(sx, sy) * ZOOM;
     ox = (W - DESIGN_W * scale) / 2;
     oy = (H - DESIGN_H * scale) / 2;
 }
