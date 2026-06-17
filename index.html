@@ -244,7 +244,7 @@ function createFlowers() {
 }
 
 // ================================================================
-// SISTEMA DE PÉTALOS QUE FORMAN "Para ti"
+// SISTEMA DE PÉTALOS QUE FORMAN "Una flor para otra flor"
 // ================================================================
 let textParticles = [];
 let textTargets = [];
@@ -264,12 +264,18 @@ function computeTextPoints() {
     const temp = document.createElement('canvas');
     temp.width = DESIGN_W; temp.height = DESIGN_H;
     const tc = temp.getContext('2d');
-    const textStr = 'Para ti';
+    const lines = ['Una flor', 'para', 'otra flor'];
+    const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
+    const fontSize = Math.min(DESIGN_W / longestLine.length * 1.8, DESIGN_H / lines.length * 0.4);
+    const lineHeight = fontSize * 1.2;
+    const startY = DESIGN_H * 0.48 - lineHeight;
     const fontSize = Math.min(DESIGN_W * 0.55, DESIGN_H * 0.35);
     tc.font = `900 ${fontSize}px Arial, sans-serif`;
     tc.textAlign = 'center'; tc.textBaseline = 'middle';
     tc.fillStyle = '#FFF';
-    tc.fillText(textStr, DESIGN_W / 2, DESIGN_H * 0.48);
+    lines.forEach((line, i) => {
+        tc.fillText(line, DESIGN_W / 2, startY + lineHeight * i);
+    });
     const data = tc.getImageData(0, 0, DESIGN_W, DESIGN_H).data;
     const pts = [];
     for (let y = 0; y < DESIGN_H; y += TEXT_STEP) {
@@ -384,14 +390,14 @@ function toggleTextMode() {
     const ui = document.querySelector('#ui');
     if (textMode) {
         textModeStart = time;
-        label.textContent = 'Para ti';
+        label.textContent = 'Una flor para otra flor';
         ui.style.color = 'rgba(220,140,180,0.5)';
         ui.style.letterSpacing = '5px';
         textParticles.forEach(p => {
             p.rotSpeed = (Math.random() - 0.5) * 0.06;
         });
     } else {
-        label.textContent = 'Clic para revelar Para ti';
+        label.textContent = 'Clic para revelar';
         ui.style.color = '';
         ui.style.letterSpacing = '';
         textParticles.forEach(p => {
