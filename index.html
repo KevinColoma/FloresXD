@@ -278,7 +278,7 @@ function computeTextPoints() {
     const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
     const fontSize = Math.min(DESIGN_W / longestLine.length * 1.8, DESIGN_H / lines.length * 0.4);
     const lineHeight = fontSize * 1.2;
-    const startY = DESIGN_H * 0.70 - lineHeight;
+    const startY = DESIGN_H * 0.78 - lineHeight;
     tc.font = `900 ${fontSize}px Arial, sans-serif`;
     tc.textAlign = 'center'; tc.textBaseline = 'middle';
     tc.fillStyle = '#FFF';
@@ -548,10 +548,10 @@ function draw() {
     const tlen = textParticles.length;
     for (let i = 0; i < tlen; i++) textParticles[i].draw(ctx);
     ctx.restore();
-    if (textMode) {
-        ctx.fillStyle = 'rgba(0,0,0,0.75)';
-        ctx.fillRect(0, 0, W, H);
-    }
+    // if (textMode) {
+    //     ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    //     ctx.fillRect(0, 0, W, H);
+    // }
 }
 
 let _frame = 0;
